@@ -1,0 +1,10 @@
+{
+    entry = {
+	bundle = alertclose;
+	cell = PSLinkCell;
+	detail = alertcloseListController;
+	icon = alertclose.png;
+	isController = 1;
+	label = AlertClose;
+    };
+}

@@ -41,7 +41,9 @@ static void PreferencesChanged() {
 
 static BOOL boolValueForKey(NSString *key){
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
-	return result ? [result boolValue] : NO;
+	BOOL temp = result ? [result boolValue] : NO;
+	[result release];
+	return temp;
 }
 
 static BOOL getPerApp(NSString *appId) {

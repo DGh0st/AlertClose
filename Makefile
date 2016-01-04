@@ -1,13 +1,14 @@
 export ARCHS = armv7 arm64
 export TARGET = iphone:clang:latest:latest
 
-PACKAGE_VERSION = 1.1
+PACKAGE_VERSION = 1.4
 
 include theos/makefiles/common.mk
 
 TWEAK_NAME = AlertClose
 AlertClose_FILES = Tweak.xm
 AlertClose_FRAMEWORKS = UIKit
+AlertClose_LDFLAGS += -Wl,-segalign,4000
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

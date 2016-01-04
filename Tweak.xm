@@ -214,13 +214,6 @@ static BOOL getPerApp(NSString *appId) {
 		%orig;
 	}
 }
-
--(void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2{
-	if(callOrig){
-		%orig;
-		callOrig = NO;
-	}
-}
 %end
 
 %ctor {

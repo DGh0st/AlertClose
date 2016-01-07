@@ -216,6 +216,7 @@ static BOOL getPerApp(NSString *appId) {
 		%orig;
 	}
 }
+<<<<<<< HEAD
 
 -(_Bool)isDisplayItemOfContainerRemovable:(id)arg1{
 	if(boolValueForKey(kIsEnabled) && !getPerApp([arg1 displayItem].displayIdentifier)){
@@ -223,6 +224,8 @@ static BOOL getPerApp(NSString *appId) {
 	}
 	return %orig(arg1);
 }
+=======
+>>>>>>> b76269565cb63cf1de4bd61be731bc602f97d491
 %end
 
 %ctor {

@@ -24,6 +24,7 @@
 -(CGFloat)minimumVerticalTranslationForKillingOfContainer:(id)arg1;
 -(void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2;
 -(id)_itemContainerForDisplayItem:(id)arg1;
+//-(id)displayItemOfContainer:(id)container;
 @end
 
 @interface SBDeckSwitcherPageView
@@ -149,16 +150,17 @@ static BOOL getPerApp(NSString *appId) {
 		callOrig = YES;
 		if(_controller != nil){
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
-		} else {
+		} else if(_deckController != nil && _container != nil && [_container displayItem] != nil){
 			[_deckController killDisplayItemOfContainer:_container withVelocity:_velocity];
 		}
 		_mode = @"Alert";
 	} else if([_mode isEqualToString:@"Relaunch Application"]){
-		callOrig = YES;
 		if(_controller != nil){
+			callOrig = YES;
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
 			[_controller launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
-		} else {
+		} else if(_deckController != nil && _container != nil && [_container displayItem] != nil){
+			callOrig = YES;
 			[_deckController killDisplayItemOfContainer:_container withVelocity:_velocity];
 			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
 		}
@@ -200,9 +202,9 @@ static BOOL getPerApp(NSString *appId) {
 %end
 
 %hook SBDeckSwitcherViewController
--(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2{
+-(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
-	if([selected.displayIdentifier isEqualToString:@"com.apple.springboard"] || (boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier) && arg1 < 0.3)){
+	if([selected.displayIdentifier isEqualToString:@"com.apple.springboard"] || (boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier) && arg1 < 0.175)){
 		%orig;
 	} else if(!isShowingAlert) {
 		isShowingAlert = YES;
@@ -215,11 +217,11 @@ static BOOL getPerApp(NSString *appId) {
 	}
 }
 
--(void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2{
-	if(callOrig){
-		%orig;
-		callOrig = NO;
+-(_Bool)isDisplayItemOfContainerRemovable:(id)arg1{
+	if(boolValueForKey(kIsEnabled) && !getPerApp([arg1 displayItem].displayIdentifier)){
+		return NO;
 	}
+	return %orig(arg1);
 }
 %end
 

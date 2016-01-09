@@ -1,9 +1,12 @@
 #import <SpringBoard/SpringBoard.h>
 
-@interface SBAppSwitcherController
+@interface SBAppSwitcherController : UIViewController
+@property(retain, nonatomic) NSArray *displayItems;
 -(void)switcherScroller:(id)arg1 displayItemWantsToBeRemoved:(id)arg2 ;
 -(void)launchAppWithIdentifier:(id)arg1 url:(id)arg2 actions:(id)arg3 ;
 -(void)forceDismissAnimated:(BOOL)arg1 ;
+-(void)switcherScroller:(id)arg1 itemTapped:(id)arg2;
+-(void)closeAllApplications;
 @end
 
 @interface SBDisplayItem : NSObject
@@ -21,9 +24,12 @@
 
 @interface SBDeckSwitcherViewController
 @property(retain, nonatomic) NSArray *displayItems;
+-(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(id)arg2;
+-(void)removeDisplayItem:(id)arg1 updateScrollPosition:(_Bool)arg2 forReason:(NSInteger)arg3 completion:(id)arg4;
 -(CGFloat)minimumVerticalTranslationForKillingOfContainer:(id)arg1;
 -(void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2;
 -(id)_itemContainerForDisplayItem:(id)arg1;
+-(void)closeAllApplications;
 @end
 
 @interface SBDeckSwitcherPageView
@@ -36,6 +42,7 @@
 
 @interface SpringBoard (AlertClose)
 -(BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
+-(void)_relaunchSpringBoardNow;
 @end
 
 __attribute__((visibility("hidden")))
@@ -60,8 +67,13 @@ static NSString *const kIsCloseEnabled = @"isCloseEnabled";
 static NSString *const kIsRelaunchEnabled = @"isRelaunchEnabled";
 static NSString *const kIsDismissEnabled = @"isDismissEnabled";
 static NSString *const kIsCancelEnabled = @"isCancelEnabled";
+static NSString *const kCustomText = @"customText";
+static NSString *const kPerApp = @"PerApp-";
+static NSString *const kHomescreen = @"isHomescreenEnabled";
+static NSString *const kPerAppKill = @"PerAppKill-";
 static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
+static BOOL isClosingAll = NO;
 
 static void PreferencesChanged() {
 	CFPreferencesAppSynchronize(CFSTR("com.dgh0st.alertclose"));
@@ -74,12 +86,21 @@ static BOOL boolValueForKey(NSString *key){
 	return temp;
 }
 
-static BOOL getPerApp(NSString *appId) {
+static NSString* stringValueForKey(NSString *key, NSString *textReplacement){
+	NSString *settingsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.dgh0st.alertclose.plist"];
+	NSString *temp = [[NSDictionary dictionaryWithContentsOfFile:settingsPath] objectForKey:key];
+	if([temp isEqualToString:@""] || temp == nil){
+		temp = @"What would you like to do with [app]? Choose wisely...";
+	}
+	return [temp stringByReplacingOccurrencesOfString:@"[app]" withString:textReplacement];
+}
+
+static BOOL getPerApp(NSString *appId, NSString *prefix) {
     BOOL result = NO;
     NSArray *allKeys = (NSArray *)CFPreferencesCopyKeyList(CFSTR("com.dgh0st.alertclose"), kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
     for (NSString *key in allKeys) {
-		if ([key hasPrefix:@"PerApp-"] && CFPreferencesGetAppIntegerValue((CFStringRef)key, CFSTR("com.dgh0st.alertclose"), NULL)) {
-		    NSString *tempId = [key substringFromIndex:[@"PerApp-" length]];
+		if ([key hasPrefix:prefix] && CFPreferencesGetAppIntegerValue((CFStringRef)key, CFSTR("com.dgh0st.alertclose"), NULL)) {
+		    NSString *tempId = [key substringFromIndex:[prefix length]];
 		    if ([tempId isEqual:appId]) {
 				result = YES;
 				break;
@@ -112,18 +133,27 @@ static BOOL getPerApp(NSString *appId) {
 	_reason	= reason;
 	if(!_actionSheet){
 		UIActionSheet *actionSheet = _actionSheet = [[%c(UIActionSheet) alloc] init];
-		actionSheet.title =[NSString stringWithFormat:@"What would you like to do with %@? Choose wisely...",_item.displayIdentifier];
-		actionSheet.delegate = self;
-		if(boolValueForKey(kIsCloseEnabled)){
-			[_actionSheet addButtonWithTitle:@"Close Application"];
+		NSInteger cancelButtonIndex;
+		if([_item.displayIdentifier isEqualToString:@"com.apple.springboard"]){
+			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
+			actionSheet.delegate = self;
+			[_actionSheet addButtonWithTitle:@"Respring"];
+			[_actionSheet addButtonWithTitle:@"Kill-All Applications"];
+			cancelButtonIndex = [_actionSheet addButtonWithTitle:@"Cancel"];
+		} else {
+			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
+			actionSheet.delegate = self;
+			if(boolValueForKey(kIsCloseEnabled)){
+				[_actionSheet addButtonWithTitle:@"Close Application"];
+			}
+			if(boolValueForKey(kIsRelaunchEnabled)){
+				[_actionSheet addButtonWithTitle:@"Relaunch Application"];
+			}
+			if(boolValueForKey(kIsDismissEnabled)){
+				[_actionSheet addButtonWithTitle:@"Dismiss Switcher"];
+			}
+			cancelButtonIndex = ((boolValueForKey(kIsCancelEnabled) || (!boolValueForKey(kIsCloseEnabled) && !boolValueForKey(kIsRelaunchEnabled) && !(boolValueForKey(kIsDismissEnabled)))))?[_actionSheet addButtonWithTitle:@"Cancel"]:0;
 		}
-		if(boolValueForKey(kIsRelaunchEnabled)){
-			[_actionSheet addButtonWithTitle:@"Relaunch Application"];
-		}
-		if(boolValueForKey(kIsDismissEnabled)){
-			[_actionSheet addButtonWithTitle:@"Dismiss Switcher"];
-		}
-		NSInteger cancelButtonIndex = ((boolValueForKey(kIsCancelEnabled) || (!boolValueForKey(kIsCloseEnabled) && !boolValueForKey(kIsRelaunchEnabled) && !(boolValueForKey(kIsDismissEnabled)))))?[_actionSheet addButtonWithTitle:@"Cancel"]:0;
 		if(!_alertWindow){
 			_alertWindow = [[%c(UIWindow) alloc] initWithFrame:[%c(UIScreen) mainScreen].bounds];
 			_alertWindow.windowLevel = 100.0f;
@@ -146,10 +176,11 @@ static BOOL getPerApp(NSString *appId) {
 		}
 		_mode = @"Alert";
 	} else if([_mode isEqualToString:@"Close Application"]){
-		callOrig = YES;
 		if(_controller != nil){
+			callOrig = YES;
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
 		} else if(_deckController != nil && _container != nil && [_container displayItem] != nil){
+			callOrig = YES;
 			[_deckController killDisplayItemOfContainer:_container withVelocity:_velocity];
 		}
 		_mode = @"Alert";
@@ -157,7 +188,11 @@ static BOOL getPerApp(NSString *appId) {
 		if(_controller != nil){
 			callOrig = YES;
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
-			[_controller launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+			if([_controller respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]){
+				[_controller launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+			} else {
+				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+			}
 		} else if(_deckController != nil && _container != nil && [_container displayItem] != nil){
 			callOrig = YES;
 			[_deckController killDisplayItemOfContainer:_container withVelocity:_velocity];
@@ -166,15 +201,42 @@ static BOOL getPerApp(NSString *appId) {
 		_mode = @"Alert";
 	} else if([_mode isEqualToString:@"Dismiss Switcher"]){
 		if(_controller != nil){
-			[_controller forceDismissAnimated:YES];
+			[_page cancelPossibleRemovalOfDisplayItem:_item];
+			if([_controller respondsToSelector:@selector(forceDismissAnimated:)]){
+				[_controller forceDismissAnimated:YES];
+			} else {
+				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(_controller, "_returnToDisplayItem");
+				[_controller switcherScroller:_page itemTapped:returnDisplayItem];
+			}
 		} else {
 			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(_deckController, "_returnToDisplayItem");
 			SBDeckSwitcherItemContainer *returnContainer = [_deckController _itemContainerForDisplayItem:returnDisplayItem];
-			SBDeckSwitcherPageView * returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
+			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
 			[returnContainer _handlePageViewTap:returnPage];
 		}
 		_mode = @"Alert";
-	}
+	} else if([_mode isEqualToString:@"Respring"]){
+		[(SpringBoard *)[UIApplication sharedApplication] _relaunchSpringBoardNow];
+		_mode = @"Alert";
+	} else if([_mode isEqualToString:@"Kill-All Applications"]){
+		if(_controller != nil){
+			[_controller closeAllApplications];
+			if([_controller respondsToSelector:@selector(forceDismissAnimated:)]){
+				[_controller forceDismissAnimated:YES];
+			} else {
+				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(_controller, "_returnToDisplayItem");
+				[_controller switcherScroller:_page itemTapped:returnDisplayItem];
+			}
+		}
+		if(_deckController != nil){
+			[_deckController closeAllApplications];
+			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(_deckController, "_returnToDisplayItem");
+			SBDeckSwitcherItemContainer *returnContainer = [_deckController _itemContainerForDisplayItem:returnDisplayItem];
+			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
+			[returnContainer _handlePageViewTap:returnPage];
+		}
+		_mode = @"Alert";
+	} 
 	_alertWindow.hidden = YES;
 	_alertWindow.rootViewController = nil;
 	[self autorelease];
@@ -188,7 +250,7 @@ static BOOL getPerApp(NSString *appId) {
 
 %hook SBAppSwitcherController
 -(void)switcherScroller:(SBAppSwitcherPageViewController *)arg1 displayItemWantsToBeRemoved:(SBDisplayItem *)arg2 {
-	if((boolValueForKey(kIsEnabled) && getPerApp(arg2.displayIdentifier)) || !boolValueForKey(kIsEnabled) || callOrig){
+	if((boolValueForKey(kIsEnabled) && getPerApp(arg2.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || callOrig || isClosingAll || (!boolValueForKey(kHomescreen) && [arg2.displayIdentifier isEqualToString:@"com.apple.springboard"])){
 		%orig;
 		callOrig = NO;
 	} else {
@@ -198,12 +260,31 @@ static BOOL getPerApp(NSString *appId) {
 		temp = nil;
 	}
 }
+
+-(_Bool)switcherScroller:(id)arg1 isDisplayItemRemovable:(SBDisplayItem *)arg2 {
+    return %orig(arg1, arg2) || (boolValueForKey(kIsEnabled) && boolValueForKey(kHomescreen) && [arg2.displayIdentifier isEqualToString:@"com.apple.springboard"]);
+}
+
+%new
+-(void)closeAllApplications{
+	isClosingAll = YES;
+	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+	[items removeObjectAtIndex:0];
+	SBAppSwitcherPageViewController *pageController = MSHookIvar<SBAppSwitcherPageViewController *>(self, "_pageController");
+	for(SBDisplayItem *item in items){
+		if(!getPerApp(item.displayIdentifier, kPerAppKill)){
+			[self switcherScroller:pageController displayItemWantsToBeRemoved:item];
+		}
+	}
+	isClosingAll = NO;
+	[items release];
+}
 %end
 
 %hook SBDeckSwitcherViewController
 -(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
-	if([selected.displayIdentifier isEqualToString:@"com.apple.springboard"] || (boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier) && arg1 < 0.175)){
+	if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < 0.175) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
 		%orig;
 	} else if(!isShowingAlert) {
 		isShowingAlert = YES;
@@ -217,10 +298,24 @@ static BOOL getPerApp(NSString *appId) {
 }
 
 -(_Bool)isDisplayItemOfContainerRemovable:(id)arg1{
-	if(boolValueForKey(kIsEnabled) && !getPerApp([arg1 displayItem].displayIdentifier)){
+	if(boolValueForKey(kIsEnabled) && !getPerApp([arg1 displayItem].displayIdentifier, kPerApp)){
 		return NO;
 	}
 	return %orig(arg1);
+}
+
+%new
+-(void)closeAllApplications{
+	isClosingAll = YES;
+	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+	[items removeObjectAtIndex:0];
+	for(SBDisplayItem *item in items){
+		if(!getPerApp(item.displayIdentifier, kPerAppKill)){
+			[self killDisplayItemOfContainer:[self _itemContainerForDisplayItem:item] withVelocity:1.0];
+		}
+	}
+	isClosingAll = NO;
+	[items release];
 }
 %end
 

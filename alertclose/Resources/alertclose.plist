@@ -35,8 +35,7 @@
 			<string>Buttons</string>
 			<key>footerText</key>
 			<string>Set the buttons that are displayed. 
-Note: Cancel will be auto enabled if all buttons are disabled, leading to no way of closing applications.
-On iOS 9 swiping upwards too fast might cause issues.</string>
+Note: Cancel will be auto enabled if all buttons are disabled, leading to no way of closing applications.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -100,7 +99,7 @@ On iOS 9 swiping upwards too fast might cause issues.</string>
 			<key>label</key>
 			<string>Specific</string>
 			<key>footerText</key>
-			<string>Blacklist applications.</string>
+			<string>Blacklist applications to display alert for.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -115,6 +114,73 @@ On iOS 9 swiping upwards too fast might cause issues.</string>
 			<string>/var/mobile/Library/Preferences/com.dgh0st.alertclose.plist</string>
 			<key>ALSettingsKeyPrefix</key>
 			<string>PerApp-</string>
+			<key>ALChangeNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Custom Text</string>
+			<key>footerText</key>
+			<string>Set a custom text to display on top of the buttons.
+[app] will be replaced with the bundle identifier of the app.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>customText</string>
+			<key>label</key>
+			<string>Custom Text:</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+            <key>label</key>
+            <string>Save</string>
+            <key>action</key>
+            <string>save</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>HomeScreen Specific</string>
+			<key>footerText</key>
+			<string>Whitelist applications to not be killed by the kill-all.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isHomescreenEnabled</string>
+			<key>label</key>
+			<string>HomeScreen Swipe Up</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>bundle</key>
+			<string>AppList</string>
+			<key>isController</key>
+			<true/>
+			<key>label</key>
+			<string>Whitelist</string>
+			<key>ALSettingsPath</key>
+			<string>/var/mobile/Library/Preferences/com.dgh0st.alertclose.plist</string>
+			<key>ALSettingsKeyPrefix</key>
+			<string>PerAppKill-</string>
 			<key>ALChangeNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>

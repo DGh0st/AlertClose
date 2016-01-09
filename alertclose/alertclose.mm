@@ -24,6 +24,9 @@
 	return _specifiers;
 }
 
+-(void)save{
+    [self.view endEditing:YES];
+}
 -(void)email{
 	if([MFMailComposeViewController canSendMail]){
 		MFMailComposeViewController *email = [[MFMailComposeViewController alloc] initWithNibName:nil bundle:nil];

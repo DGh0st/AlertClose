@@ -70,7 +70,9 @@ static NSString *const kIsCancelEnabled = @"isCancelEnabled";
 static NSString *const kCustomText = @"customText";
 static NSString *const kPerApp = @"PerApp-";
 static NSString *const kHomescreen = @"isHomescreenEnabled";
+static NSString *const kWhitelist = @"isWhitelistEnabled";
 static NSString *const kPerAppKill = @"PerAppKill-";
+static NSString *const kVerticalScroll = @"VerticalScroll";
 static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
 static BOOL isClosingAll = NO;
@@ -93,6 +95,13 @@ static NSString* stringValueForKey(NSString *key, NSString *textReplacement){
 		temp = @"What would you like to do with [app]? Choose wisely...";
 	}
 	return [temp stringByReplacingOccurrencesOfString:@"[app]" withString:textReplacement];
+}
+
+static CGFloat floatValueForKey(NSString *key, CGFloat defaultValue){
+	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
+	CGFloat temp = result ? [result floatValue] : defaultValue;
+	[result release];
+	return temp;
 }
 
 static BOOL getPerApp(NSString *appId, NSString *prefix) {
@@ -272,7 +281,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 	[items removeObjectAtIndex:0];
 	SBAppSwitcherPageViewController *pageController = MSHookIvar<SBAppSwitcherPageViewController *>(self, "_pageController");
 	for(SBDisplayItem *item in items){
-		if(!getPerApp(item.displayIdentifier, kPerAppKill)){
+		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
 			[self switcherScroller:pageController displayItemWantsToBeRemoved:item];
 		}
 	}
@@ -284,7 +293,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 %hook SBDeckSwitcherViewController
 -(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
-	if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < 0.175) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
+	if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < floatValueForKey(kVerticalScroll, 0.175)) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
 		%orig;
 	} else if(!isShowingAlert) {
 		isShowingAlert = YES;
@@ -310,7 +319,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 	[items removeObjectAtIndex:0];
 	for(SBDisplayItem *item in items){
-		if(!getPerApp(item.displayIdentifier, kPerAppKill)){
+		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
 			[self killDisplayItemOfContainer:[self _itemContainerForDisplayItem:item] withVelocity:1.0];
 		}
 	}

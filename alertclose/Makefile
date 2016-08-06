@@ -1,4 +1,4 @@
-include theos/makefiles/common.mk
+include $(THEOS_MAKE_PATH)/common.mk
 
 BUNDLE_NAME = alertclose
 alertclose_FILES = alertclose.mm

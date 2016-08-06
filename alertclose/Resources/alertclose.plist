@@ -170,6 +170,20 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 		</dict>
 		<dict>
 			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isWhitelistEnabled</string>
+			<key>label</key>
+			<string>Enable Whitelist</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>bundle</key>
 			<string>AppList</string>
@@ -182,6 +196,33 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>ALSettingsKeyPrefix</key>
 			<string>PerAppKill-</string>
 			<key>ALChangeNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>iOS 9 Exclusive</string>
+			<key>footerText</key>
+			<string>Set the vertical scroll required to invoke the alert (recommend around 0.175).
+Only for iOS 9 and above.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>min</key>
+			<real>0.1</real>
+			<key>max</key>
+			<real>1.0</real>
+			<key>showValue</key>
+			<true/>
+			<key>default</key>
+			<real>0.175</real>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>VerticalScroll</string>
+			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>
 		<dict>

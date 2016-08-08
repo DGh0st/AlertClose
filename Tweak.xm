@@ -42,7 +42,11 @@
 
 @interface SpringBoard (AlertClose)
 -(BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
--(void)_relaunchSpringBoardNow;
+@end
+
+@interface FBSystemService
++(id)sharedInstance;
+-(void)exitAndRelaunch:(BOOL)arg1;
 @end
 
 __attribute__((visibility("hidden")))
@@ -225,7 +229,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 		}
 		_mode = @"Alert";
 	} else if([_mode isEqualToString:@"Respring"]){
-		[(SpringBoard *)[UIApplication sharedApplication] _relaunchSpringBoardNow];
+		[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
 		_mode = @"Alert";
 	} else if([_mode isEqualToString:@"Kill-All Applications"]){
 		if(_controller != nil){

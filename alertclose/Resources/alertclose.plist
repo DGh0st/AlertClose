@@ -152,7 +152,8 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>label</key>
 			<string>HomeScreen Specific</string>
 			<key>footerText</key>
-			<string>Whitelist applications to not be killed by the kill-all.</string>
+			<string>Stop now playing applications from being killed when "Kill-All Applications" is tapped.
+Whitelist applications to not be killed by the kill-all.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -165,6 +166,20 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<string>isHomescreenEnabled</string>
 			<key>label</key>
 			<string>HomeScreen Swipe Up</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isNowPlayingEnabled</string>
+			<key>label</key>
+			<string>Continue Now Playing</string>
 			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>

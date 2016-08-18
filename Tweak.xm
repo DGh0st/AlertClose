@@ -42,11 +42,21 @@
 
 @interface SpringBoard (AlertClose)
 -(BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
+-(void)_handleMenuButtonEvent;
 @end
 
 @interface FBSystemService
 +(id)sharedInstance;
 -(void)exitAndRelaunch:(BOOL)arg1;
+@end
+
+@interface SBApplication (AlertClose)
+-(id)bundleIdentifier;
+@end
+
+@interface SBMediaController (AlertClose)
++(id)sharedInstance;
+-(SBApplication *)nowPlayingApplication;
 @end
 
 __attribute__((visibility("hidden")))
@@ -77,6 +87,7 @@ static NSString *const kHomescreen = @"isHomescreenEnabled";
 static NSString *const kWhitelist = @"isWhitelistEnabled";
 static NSString *const kPerAppKill = @"PerAppKill-";
 static NSString *const kVerticalScroll = @"VerticalScroll";
+static NSString *const kIsNowPlayingEnabled = @"isNowPlayingEnabled";
 static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
 static BOOL isClosingAll = NO;
@@ -281,11 +292,15 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 %new
 -(void)closeAllApplications{
 	isClosingAll = YES;
+	NSString *nowPlayingBundleIdentifier = [[[%c(SBMediaController) sharedInstance] nowPlayingApplication] bundleIdentifier];
 	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 	[items removeObjectAtIndex:0];
 	SBAppSwitcherPageViewController *pageController = MSHookIvar<SBAppSwitcherPageViewController *>(self, "_pageController");
 	for(SBDisplayItem *item in items){
 		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
+			if (boolValueForKey(kIsNowPlayingEnabled) && [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
+				continue;
+			}
 			[self switcherScroller:pageController displayItemWantsToBeRemoved:item];
 		}
 	}
@@ -320,10 +335,14 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 %new
 -(void)closeAllApplications{
 	isClosingAll = YES;
+	NSString *nowPlayingBundleIdentifier = [[[%c(SBMediaController) sharedInstance] nowPlayingApplication] bundleIdentifier];
 	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 	[items removeObjectAtIndex:0];
 	for(SBDisplayItem *item in items){
 		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
+			if (boolValueForKey(kIsNowPlayingEnabled) &&  [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
+				continue;
+			}
 			[self killDisplayItemOfContainer:[self _itemContainerForDisplayItem:item] withVelocity:1.0];
 		}
 	}

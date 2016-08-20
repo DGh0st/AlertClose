@@ -13,7 +13,12 @@
 @property (nonatomic,readonly) NSString* displayIdentifier;
 @end
 
+@interface SBDisplayLayout : NSObject
+-(NSArray *)displayItems;
+@end
+
 @interface SBAppSwitcherPageViewController
+-(NSArray *)displayLayouts;
 -(void)cancelPossibleRemovalOfDisplayItem:(id)arg1 ;
 @end
 
@@ -88,6 +93,7 @@ static NSString *const kWhitelist = @"isWhitelistEnabled";
 static NSString *const kPerAppKill = @"PerAppKill-";
 static NSString *const kVerticalScroll = @"VerticalScroll";
 static NSString *const kIsNowPlayingEnabled = @"isNowPlayingEnabled";
+static NSString *const kQuickAction = @"QuickAction";
 static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
 static BOOL isClosingAll = NO;
@@ -115,6 +121,13 @@ static NSString* stringValueForKey(NSString *key, NSString *textReplacement){
 static CGFloat floatValueForKey(NSString *key, CGFloat defaultValue){
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
 	CGFloat temp = result ? [result floatValue] : defaultValue;
+	[result release];
+	return temp;
+}
+
+static NSInteger intValueForKey(NSString *key, NSInteger defaultValue){
+	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
+	NSInteger temp = result ? [result intValue] : defaultValue;
 	[result release];
 	return temp;
 }
@@ -273,6 +286,51 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 @end
 
 %hook SBAppSwitcherController
+-(void)switcherIconScroller:(SBAppSwitcherPageViewController *)arg1 contentOffsetChanged:(CGFloat)arg2 {
+	NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
+	if (callOrig) {
+		%orig;
+	} else if (boolValueForKey(kIsEnabled) && quickActionIndicator != 0 && arg2 < 0.0f &&  (-1.0f * arg2) > floatValueForKey(kVerticalScroll, 0.175)) {
+		if (quickActionIndicator == 1) { // respring
+			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
+		} else if (quickActionIndicator == 2) { // kill-all applications
+			[self closeAllApplications];
+			if([self respondsToSelector:@selector(forceDismissAnimated:)]){
+				[self forceDismissAnimated:YES];
+			} else {
+				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+				[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+			}
+		} else if (quickActionIndicator == 3) { // close application
+			callOrig = YES;
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+			SBDisplayItem *_item = [items objectAtIndex:0];
+			[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+			[items release];
+		} else if (quickActionIndicator == 4) { // relaunch application
+			callOrig = YES;
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+			SBDisplayItem *_item = [items objectAtIndex:0];
+			[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+			if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+				[self launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+			} else {
+				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+			}
+			[items release];
+		} else if (quickActionIndicator == 5) { // dismiss switcher
+			if([self respondsToSelector:@selector(forceDismissAnimated:)]) {
+				[self forceDismissAnimated:YES];
+			} else {
+				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+				[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+			}
+		}
+	} else {
+		%orig;
+	}
+}
+
 -(void)switcherScroller:(SBAppSwitcherPageViewController *)arg1 displayItemWantsToBeRemoved:(SBDisplayItem *)arg2 {
 	if((boolValueForKey(kIsEnabled) && getPerApp(arg2.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || callOrig || isClosingAll || (!boolValueForKey(kHomescreen) && [arg2.displayIdentifier isEqualToString:@"com.apple.springboard"])){
 		%orig;
@@ -312,7 +370,30 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 %hook SBDeckSwitcherViewController
 -(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
-	if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < floatValueForKey(kVerticalScroll, 0.175)) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
+	NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
+	if (boolValueForKey(kIsEnabled) && quickActionIndicator != 0 && arg1 < 0.0f &&  (-1.0f * arg1) > floatValueForKey(kVerticalScroll, 0.175)) {
+		if (quickActionIndicator == 1) { // respring
+			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
+		} else if (quickActionIndicator == 2) { // kill-all applications
+			[self closeAllApplications];
+			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];
+			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
+			[returnContainer _handlePageViewTap:returnPage];
+		} else if (quickActionIndicator == 3) { // close application
+			callOrig = YES;
+			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
+		} else if (quickActionIndicator == 4) { // relaunch application
+			callOrig = YES;
+			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
+			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:selected.displayIdentifier suspended:NO];
+		} else if (quickActionIndicator == 5) { // dismiss switcher
+			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];
+			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
+			[returnContainer _handlePageViewTap:returnPage];
+		}
+	} else if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < floatValueForKey(kVerticalScroll, 0.175)) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
 		%orig;
 	} else if(!isShowingAlert) {
 		isShowingAlert = YES;

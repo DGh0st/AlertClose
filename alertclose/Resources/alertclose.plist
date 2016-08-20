@@ -217,10 +217,11 @@ Whitelist applications to not be killed by the kill-all.</string>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>iOS 9 Exclusive</string>
+			<string>Quick Actions And Vertical Sroll</string>
 			<key>footerText</key>
-			<string>Set the vertical scroll required to invoke the alert (recommend around 0.175).
-Only for iOS 9 and above.</string>
+			<string>Set the vertical scroll required to invoke the alert and quick action (recommend around 0.175).
+Action invoked on swipe down.
+Disclaimer: Quick Action is untested on iOS 8.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -237,6 +238,40 @@ Only for iOS 9 and above.</string>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
 			<string>VerticalScroll</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>key</key>
+			<string>QuickAction</string>
+			<key>label</key>
+			<string>Quick Action</string>
+			<key>detail</key>
+			<string>PSListItemsController</string>
+			<key>validTitles</key>
+				<array>
+					<string>None</string>
+					<string>Respring</string>
+					<string>Kill-All Applications</string>
+					<string>Close Application</string>
+					<string>Relaunch Application</string>
+					<string>Dismiss Switcher</string>
+				</array>
+			<key>validValues</key>
+				<array>
+					<integer>0</integer>
+					<integer>1</integer>
+					<integer>2</integer>
+					<integer>3</integer>
+					<integer>4</integer>
+					<integer>5</integer>
+				</array>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
 			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>

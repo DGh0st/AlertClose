@@ -41,7 +41,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<true/>
+			<false/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -55,7 +55,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<true/>
+			<false/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -69,7 +69,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<true/>
+			<false/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -83,7 +83,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<true/>
+			<false/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -255,18 +255,22 @@ Disclaimer: Quick Action is untested on iOS 8.</string>
 					<string>None</string>
 					<string>Respring</string>
 					<string>Kill-All Applications</string>
+					<string>Relaunch-All Applications</string>
+					<string>Launch Application</string>
 					<string>Close Application</string>
 					<string>Relaunch Application</string>
 					<string>Dismiss Switcher</string>
 				</array>
 			<key>validValues</key>
 				<array>
-					<integer>0</integer>
-					<integer>1</integer>
-					<integer>2</integer>
-					<integer>3</integer>
-					<integer>4</integer>
-					<integer>5</integer>
+					<integer>0</integer><!--None-->
+					<integer>1</integer><!--Respring-->
+					<integer>2</integer><!--Kill-All-->
+					<integer>3</integer><!--Relaunch-All-->
+					<integer>4</integer><!--Launch-->
+					<integer>5</integer><!--Close-->
+					<integer>6</integer><!--Rleaunch-->
+					<integer>7</integer><!--Dismiss Switcher-->
 				</array>
 			<key>default</key>
 			<integer>0</integer>

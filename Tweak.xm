@@ -6,7 +6,8 @@
 -(void)launchAppWithIdentifier:(id)arg1 url:(id)arg2 actions:(id)arg3 ;
 -(void)forceDismissAnimated:(BOOL)arg1 ;
 -(void)switcherScroller:(id)arg1 itemTapped:(id)arg2;
--(void)closeAllApplications;
+-(void)closeAllApplications:(BOOL)includeWhitelist;
+-(void)launchApplications:(NSMutableArray *)itemsToRun;
 @end
 
 @interface SBDisplayItem : NSObject
@@ -34,7 +35,8 @@
 -(CGFloat)minimumVerticalTranslationForKillingOfContainer:(id)arg1;
 -(void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2;
 -(id)_itemContainerForDisplayItem:(id)arg1;
--(void)closeAllApplications;
+-(void)closeAllApplications:(BOOL)includeWhitelist;
+-(void)launchApplications:(NSMutableArray *)itemsToRun;
 @end
 
 @interface SBDeckSwitcherPageView
@@ -47,7 +49,6 @@
 
 @interface SpringBoard (AlertClose)
 -(BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
--(void)_handleMenuButtonEvent;
 @end
 
 @interface FBSystemService
@@ -102,14 +103,14 @@ static void PreferencesChanged() {
 	CFPreferencesAppSynchronize(CFSTR("com.dgh0st.alertclose"));
 }
 
-static BOOL boolValueForKey(NSString *key){
+static BOOL boolValueForKey(NSString *key){ // get bool value of preference
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
 	BOOL temp = result ? [result boolValue] : NO;
 	[result release];
 	return temp;
 }
 
-static NSString* stringValueForKey(NSString *key, NSString *textReplacement){
+static NSString* stringValueForKey(NSString *key, NSString *textReplacement){ // get string value of preference
 	NSString *settingsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.dgh0st.alertclose.plist"];
 	NSString *temp = [[NSDictionary dictionaryWithContentsOfFile:settingsPath] objectForKey:key];
 	if([temp isEqualToString:@""] || temp == nil){
@@ -118,21 +119,21 @@ static NSString* stringValueForKey(NSString *key, NSString *textReplacement){
 	return [temp stringByReplacingOccurrencesOfString:@"[app]" withString:textReplacement];
 }
 
-static CGFloat floatValueForKey(NSString *key, CGFloat defaultValue){
+static CGFloat floatValueForKey(NSString *key, CGFloat defaultValue){ // get float value of preference
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
 	CGFloat temp = result ? [result floatValue] : defaultValue;
 	[result release];
 	return temp;
 }
 
-static NSInteger intValueForKey(NSString *key, NSInteger defaultValue){
+static NSInteger intValueForKey(NSString *key, NSInteger defaultValue){ // get int value of preference
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
 	NSInteger temp = result ? [result intValue] : defaultValue;
 	[result release];
 	return temp;
 }
 
-static BOOL getPerApp(NSString *appId, NSString *prefix) {
+static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of preference of specific application (AppList)
     BOOL result = NO;
     NSArray *allKeys = (NSArray *)CFPreferencesCopyKeyList(CFSTR("com.dgh0st.alertclose"), kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
     for (NSString *key in allKeys) {
@@ -171,13 +172,14 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 	if(!_actionSheet){
 		UIActionSheet *actionSheet = _actionSheet = [[%c(UIActionSheet) alloc] init];
 		NSInteger cancelButtonIndex;
-		if([_item.displayIdentifier isEqualToString:@"com.apple.springboard"]){
+		if([_item.displayIdentifier isEqualToString:@"com.apple.springboard"]){ // homescreen
 			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
 			actionSheet.delegate = self;
 			[_actionSheet addButtonWithTitle:@"Respring"];
 			[_actionSheet addButtonWithTitle:@"Kill-All Applications"];
+			[_actionSheet addButtonWithTitle:@"Relaunch-All Applications"];
 			cancelButtonIndex = [_actionSheet addButtonWithTitle:@"Cancel"];
-		} else {
+		} else { // everything else
 			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
 			actionSheet.delegate = self;
 			if(boolValueForKey(kIsCloseEnabled)){
@@ -207,12 +209,12 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 -(void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex{
 	[self retain];
 	_mode = [actionSheet buttonTitleAtIndex:buttonIndex];
-	if([_mode isEqualToString:@"Cancel"]){
+	if([_mode isEqualToString:@"Cancel"]){ // cancel
 		if(_controller != nil){
 			[_page cancelPossibleRemovalOfDisplayItem:_item];
 		}
 		_mode = @"Alert";
-	} else if([_mode isEqualToString:@"Close Application"]){
+	} else if([_mode isEqualToString:@"Close Application"]){ // close application
 		if(_controller != nil){
 			callOrig = YES;
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
@@ -221,7 +223,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 			[_deckController killDisplayItemOfContainer:_container withVelocity:_velocity];
 		}
 		_mode = @"Alert";
-	} else if([_mode isEqualToString:@"Relaunch Application"]){
+	} else if([_mode isEqualToString:@"Relaunch Application"]){ // relaunch application
 		if(_controller != nil){
 			callOrig = YES;
 			[_controller switcherScroller:_page displayItemWantsToBeRemoved:_item];
@@ -236,7 +238,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
 		}
 		_mode = @"Alert";
-	} else if([_mode isEqualToString:@"Dismiss Switcher"]){
+	} else if([_mode isEqualToString:@"Dismiss Switcher"]){ // dismiss switcher
 		if(_controller != nil){
 			[_page cancelPossibleRemovalOfDisplayItem:_item];
 			if([_controller respondsToSelector:@selector(forceDismissAnimated:)]){
@@ -252,12 +254,12 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 			[returnContainer _handlePageViewTap:returnPage];
 		}
 		_mode = @"Alert";
-	} else if([_mode isEqualToString:@"Respring"]){
+	} else if([_mode isEqualToString:@"Respring"]){ // respring
 		[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
 		_mode = @"Alert";
-	} else if([_mode isEqualToString:@"Kill-All Applications"]){
+	} else if([_mode isEqualToString:@"Kill-All Applications"]){ // kill-all applications
 		if(_controller != nil){
-			[_controller closeAllApplications];
+			[_controller closeAllApplications:YES];
 			if([_controller respondsToSelector:@selector(forceDismissAnimated:)]){
 				[_controller forceDismissAnimated:YES];
 			} else {
@@ -266,21 +268,34 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 			}
 		}
 		if(_deckController != nil){
-			[_deckController closeAllApplications];
+			[_deckController closeAllApplications:YES];
 			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(_deckController, "_returnToDisplayItem");
 			SBDeckSwitcherItemContainer *returnContainer = [_deckController _itemContainerForDisplayItem:returnDisplayItem];
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
 			[returnContainer _handlePageViewTap:returnPage];
 		}
 		_mode = @"Alert";
-	} 
+	} else if([_mode isEqualToString:@"Relaunch-All Applications"]){ // Relaunch-All applications
+		if(_controller != nil){
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[_controller displayItems]];
+			[_controller closeAllApplications:NO];
+			[_controller launchApplications:items];
+			[items release];
+		}
+		if(_deckController != nil){
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[_deckController displayItems]];
+			[_deckController closeAllApplications:NO];
+			[_deckController launchApplications:items];
+			[items release];
+		}
+	}
 	_alertWindow.hidden = YES;
 	_alertWindow.rootViewController = nil;
 	[self autorelease];
 	isShowingAlert = NO;
 }
--(BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
-{
+
+-(BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation {
 	return (toInterfaceOrientation != UIInterfaceOrientationPortraitUpsideDown) || ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
 }
 @end
@@ -294,20 +309,29 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 		if (quickActionIndicator == 1) { // respring
 			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
 		} else if (quickActionIndicator == 2) { // kill-all applications
-			[self closeAllApplications];
+			[self closeAllApplications:YES];
 			if([self respondsToSelector:@selector(forceDismissAnimated:)]){
 				[self forceDismissAnimated:YES];
 			} else {
 				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 				[self switcherScroller:arg1 itemTapped:returnDisplayItem];
 			}
-		} else if (quickActionIndicator == 3) { // close application
+		} else if (quickActionIndicator == 3) { // relaunch-all applications
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+			[self closeAllApplications:NO];
+			[self launchApplications:items];
+			[items release];
+		} else if (quickActionIndicator == 4) { // launch application
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+			SBDisplayItem *_item = [items objectAtIndex:0];
+			[self switcherScroller:arg1 itemTapped:_item];
+		} else if (quickActionIndicator == 5) { // close application
 			callOrig = YES;
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
 			SBDisplayItem *_item = [items objectAtIndex:0];
 			[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
 			[items release];
-		} else if (quickActionIndicator == 4) { // relaunch application
+		} else if (quickActionIndicator == 6) { // relaunch application
 			callOrig = YES;
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
 			SBDisplayItem *_item = [items objectAtIndex:0];
@@ -318,7 +342,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
 			}
 			[items release];
-		} else if (quickActionIndicator == 5) { // dismiss switcher
+		} else if (quickActionIndicator == 7) { // dismiss switcher
 			if([self respondsToSelector:@selector(forceDismissAnimated:)]) {
 				[self forceDismissAnimated:YES];
 			} else {
@@ -348,22 +372,37 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 }
 
 %new
--(void)closeAllApplications{
+-(void)closeAllApplications:(BOOL)includeWhitelist {
 	isClosingAll = YES;
 	NSString *nowPlayingBundleIdentifier = [[[%c(SBMediaController) sharedInstance] nowPlayingApplication] bundleIdentifier];
 	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 	[items removeObjectAtIndex:0];
 	SBAppSwitcherPageViewController *pageController = MSHookIvar<SBAppSwitcherPageViewController *>(self, "_pageController");
-	for(SBDisplayItem *item in items){
-		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
-			if (boolValueForKey(kIsNowPlayingEnabled) && [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
-				continue;
+	for(SBDisplayItem *item in items){ // close applications
+		if (includeWhitelist){
+			if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
+				if (boolValueForKey(kIsNowPlayingEnabled) && [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
+					continue;
+				}
+				[self switcherScroller:pageController displayItemWantsToBeRemoved:item];
 			}
+		} else {
 			[self switcherScroller:pageController displayItemWantsToBeRemoved:item];
 		}
 	}
 	isClosingAll = NO;
 	[items release];
+}
+
+%new
+-(void)launchApplications:(NSMutableArray *)itemsToRun {
+	for (SBDisplayItem *item in itemsToRun){ // launch
+		if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+			[self launchAppWithIdentifier:item.displayIdentifier url:nil actions:nil];
+		} else {
+			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+		}
+	}
 }
 %end
 
@@ -375,19 +414,27 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 		if (quickActionIndicator == 1) { // respring
 			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
 		} else if (quickActionIndicator == 2) { // kill-all applications
-			[self closeAllApplications];
+			[self closeAllApplications:YES];
 			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
 			[returnContainer _handlePageViewTap:returnPage];
-		} else if (quickActionIndicator == 3) { // close application
+		} else if (quickActionIndicator == 3) { // relaunch-all applications
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+			[self closeAllApplications:NO];
+			[self launchApplications:items];
+			[items release];
+		} else if (quickActionIndicator == 4) { // launch application
+			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(arg2, "_pageView");
+			[arg2 _handlePageViewTap:returnPage];
+		} else if (quickActionIndicator == 5) { // close application
 			callOrig = YES;
 			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
-		} else if (quickActionIndicator == 4) { // relaunch application
+		} else if (quickActionIndicator == 6) { // relaunch application
 			callOrig = YES;
 			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
 			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:selected.displayIdentifier suspended:NO];
-		} else if (quickActionIndicator == 5) { // dismiss switcher
+		} else if (quickActionIndicator == 7) { // dismiss switcher
 			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
@@ -414,21 +461,32 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) {
 }
 
 %new
--(void)closeAllApplications{
+-(void)closeAllApplications:(BOOL)includeWhitelist{
 	isClosingAll = YES;
 	NSString *nowPlayingBundleIdentifier = [[[%c(SBMediaController) sharedInstance] nowPlayingApplication] bundleIdentifier];
 	NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 	[items removeObjectAtIndex:0];
-	for(SBDisplayItem *item in items){
-		if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
-			if (boolValueForKey(kIsNowPlayingEnabled) &&  [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
-				continue;
+	for(SBDisplayItem *item in items){ // close applications
+		if(includeWhitelist){
+			if(!boolValueForKey(kWhitelist) || !getPerApp(item.displayIdentifier, kPerAppKill)){
+				if (boolValueForKey(kIsNowPlayingEnabled) &&  [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
+					continue;
+				}
+				[self killDisplayItemOfContainer:[self _itemContainerForDisplayItem:item] withVelocity:1.0];
 			}
+		} else {
 			[self killDisplayItemOfContainer:[self _itemContainerForDisplayItem:item] withVelocity:1.0];
 		}
 	}
 	isClosingAll = NO;
 	[items release];
+}
+
+%new
+-(void)launchApplications:(NSMutableArray *)itemsToRun {
+	for (SBDisplayItem *item in itemsToRun){ // launch applications
+		[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+	}
 }
 %end
 

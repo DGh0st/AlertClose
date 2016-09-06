@@ -1,7 +1,7 @@
 Package: com.dgh0st.alertclose
 Name: AlertClose
 Depends: mobilesubstrate, applist, preferenceloader
-Version: 1.6.4
+Version: 1.6.5
 Architecture: iphoneos-arm
 Description: Display an alert with option to close, relaunch, dismiss switcher and cancel when you try to swipe application up through application switcher.
 Maintainer: DGh0st <deeppwnage@yahoo.com>

@@ -329,17 +329,21 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 			callOrig = YES;
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
 			SBDisplayItem *_item = [items objectAtIndex:0];
-			[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+			if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+				[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+			}
 			[items release];
 		} else if (quickActionIndicator == 6) { // relaunch application
 			callOrig = YES;
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
 			SBDisplayItem *_item = [items objectAtIndex:0];
-			[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
-			if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
-				[self launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
-			} else {
-				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+			if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+				[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+				if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+					[self launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+				} else {
+					[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+				}
 			}
 			[items release];
 		} else if (quickActionIndicator == 7) { // dismiss switcher
@@ -429,11 +433,15 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 			[arg2 _handlePageViewTap:returnPage];
 		} else if (quickActionIndicator == 5) { // close application
 			callOrig = YES;
-			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
+			if (![selected.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+				[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
+			}
 		} else if (quickActionIndicator == 6) { // relaunch application
 			callOrig = YES;
-			[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
-			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:selected.displayIdentifier suspended:NO];
+			if (![selected.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+				[self killDisplayItemOfContainer:arg2 withVelocity:1.0];
+				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:selected.displayIdentifier suspended:NO];
+			}
 		} else if (quickActionIndicator == 7) { // dismiss switcher
 			SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];

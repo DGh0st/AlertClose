@@ -24,6 +24,20 @@
 	return _specifiers;
 }
 
+-(void)viewWillAppear:(BOOL)animated {
+	// just testing if this works
+	[super viewWillAppear:animated];
+	self.view.tintColor = [UIColor cyanColor];
+	self.navigationController.navigationBar.tintColor = [UIColor cyanColor];
+}
+
+-(void)viewWillDisappear:(BOOL)animated {
+	// just testing if this works
+	[super viewWillDisappear:animated];
+	self.view.tintColor = nil;
+	self.navigationController.navigationBar.tintColor = nil;
+}
+
 -(void)save{
     [self.view endEditing:YES];
 }

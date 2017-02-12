@@ -1,7 +1,7 @@
-include $(THEOS_MAKE_PATH)/common.mk
+include $(THEOS)/makefiles/common.mk
 
 BUNDLE_NAME = alertclose
-alertclose_FILES = alertclose.mm
+alertclose_FILES = ACRootListController.m
 alertclose_INSTALL_PATH = /Library/PreferenceBundles
 alertclose_FRAMEWORKS = UIKit MessageUI
 alertclose_PRIVATE_FRAMEWORKS = Preferences

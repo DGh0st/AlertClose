@@ -1,4 +1,6 @@
 #import <SpringBoard/SpringBoard.h>
+#import <SpringBoard/SBApplication.h>
+#import <SpringBoard/SBMediaController.h>
 
 @interface SBAppSwitcherController : UIViewController
 @property(retain, nonatomic) NSArray *displayItems;
@@ -42,9 +44,14 @@
 @interface SBDeckSwitcherPageView
 @end
 
+@interface UIWindow (AlertClose)
+-(void)_updateToInterfaceOrientation:(NSInteger)arg1 animated:(BOOL)arg2;
+@end
+
 @interface UIApplication (AlertClose)
 +(id)sharedApplication;
 -(BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
+-(NSInteger)_frontMostAppOrientation;
 @end
 
 @interface SpringBoard (AlertClose)
@@ -110,13 +117,13 @@ static BOOL boolValueForKey(NSString *key){ // get bool value of preference
 	return temp;
 }
 
-static NSString* stringValueForKey(NSString *key, NSString *textReplacement){ // get string value of preference
+static NSString* stringValueForKey(NSString *key, NSString *appNameReplacement, NSString *appIdReplacement){ // get string value of preference
 	NSString *settingsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.dgh0st.alertclose.plist"];
 	NSString *temp = [[NSDictionary dictionaryWithContentsOfFile:settingsPath] objectForKey:key];
 	if([temp isEqualToString:@""] || temp == nil){
 		temp = @"What would you like to do with [app]? Choose wisely...";
 	}
-	return [temp stringByReplacingOccurrencesOfString:@"[app]" withString:textReplacement];
+	return [[temp stringByReplacingOccurrencesOfString:@"[app]" withString:appNameReplacement] stringByReplacingOccurrencesOfString:@"[app id]" withString:appIdReplacement];
 }
 
 static CGFloat floatValueForKey(NSString *key, CGFloat defaultValue){ // get float value of preference
@@ -173,14 +180,20 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 		UIActionSheet *actionSheet = _actionSheet = [[%c(UIActionSheet) alloc] init];
 		NSInteger cancelButtonIndex;
 		if([_item.displayIdentifier isEqualToString:@"com.apple.springboard"]){ // homescreen
-			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
+			actionSheet.title = stringValueForKey(kCustomText, @"HomeScreen", _item.displayIdentifier);
 			actionSheet.delegate = self;
 			[_actionSheet addButtonWithTitle:@"Respring"];
 			[_actionSheet addButtonWithTitle:@"Kill-All Applications"];
 			[_actionSheet addButtonWithTitle:@"Relaunch-All Applications"];
 			cancelButtonIndex = [_actionSheet addButtonWithTitle:@"Cancel"];
 		} else { // everything else
-			actionSheet.title = stringValueForKey(kCustomText, _item.displayIdentifier);
+			NSString *appName = @"";
+			if (container) {
+				appName = (MSHookIvar<UILabel *>(container, "_iconTitle")).text;
+			} else if (page) {
+				appName = _item.displayIdentifier;
+			}
+			actionSheet.title = stringValueForKey(kCustomText, appName, _item.displayIdentifier);
 			actionSheet.delegate = self;
 			if(boolValueForKey(kIsCloseEnabled)){
 				[_actionSheet addButtonWithTitle:@"Close Application"];
@@ -200,7 +213,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 		_alertWindow.hidden = NO;
 		_alertWindow.rootViewController = self;
 		if ([_alertWindow respondsToSelector:@selector(_updateToInterfaceOrientation:animated:)]){
-			[_alertWindow _updateToInterfaceOrientation:[(SpringBoard *)UIApp _frontMostAppOrientation] animated:NO];
+			[_alertWindow _updateToInterfaceOrientation:[[UIApplication sharedApplication] _frontMostAppOrientation] animated:NO];
 		}
 		actionSheet.cancelButtonIndex = cancelButtonIndex;
 		[actionSheet showInView:self.view];
@@ -300,6 +313,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 }
 @end
 
+%group BeforeTen
 %hook SBAppSwitcherController
 -(void)switcherIconScroller:(SBAppSwitcherPageViewController *)arg1 contentOffsetChanged:(CGFloat)arg2 {
 	NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
@@ -409,7 +423,9 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 	}
 }
 %end
+%end
 
+%group TenPlus
 %hook SBDeckSwitcherViewController
 -(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
@@ -497,6 +513,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 	}
 }
 %end
+%end
 
 %ctor {
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
@@ -505,4 +522,11 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 				    CFSTR("com.dgh0st.alertclose/settingschanged"),
 				    NULL,
 				    CFNotificationSuspensionBehaviorDeliverImmediately);
+
+    if (%c(SBAppSwitcherController)) {
+    	%init(BeforeTen);
+    }
+    if (%c(SBDeckSwitcherViewController)) {
+    	%init(TenPlus);
+    }
 }

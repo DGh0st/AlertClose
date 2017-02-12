@@ -124,7 +124,8 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<string>Custom Text</string>
 			<key>footerText</key>
 			<string>Set a custom text to display on top of the buttons.
-[app] will be replaced with the bundle identifier of the app.</string>
+[app] will be replaced with the name of the app (iOS 9+).
+[app id] will be replaced with the bundle identifier of the app.</string>
 		</dict>
 		<dict>
 			<key>cell</key>

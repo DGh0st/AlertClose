@@ -102,6 +102,7 @@ static NSString *const kPerAppKill = @"PerAppKill-";
 static NSString *const kVerticalScroll = @"VerticalScroll";
 static NSString *const kIsNowPlayingEnabled = @"isNowPlayingEnabled";
 static NSString *const kQuickAction = @"QuickAction";
+static NSString *const kIsInvertEnabled = @"isInvertEnabled";
 static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
 static BOOL isClosingAll = NO;
@@ -316,56 +317,67 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 %group BeforeTen
 %hook SBAppSwitcherController
 -(void)switcherIconScroller:(SBAppSwitcherPageViewController *)arg1 contentOffsetChanged:(CGFloat)arg2 {
-	NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
 	if (callOrig) {
 		%orig;
-	} else if (boolValueForKey(kIsEnabled) && quickActionIndicator != 0 && arg2 < 0.0f &&  (-1.0f * arg2) > floatValueForKey(kVerticalScroll, 0.175)) {
-		if (quickActionIndicator == 1) { // respring
-			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
-		} else if (quickActionIndicator == 2) { // kill-all applications
-			[self closeAllApplications:YES];
-			if([self respondsToSelector:@selector(forceDismissAnimated:)]){
-				[self forceDismissAnimated:YES];
-			} else {
-				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
-				[self switcherScroller:arg1 itemTapped:returnDisplayItem];
-			}
-		} else if (quickActionIndicator == 3) { // relaunch-all applications
-			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
-			[self closeAllApplications:NO];
-			[self launchApplications:items];
+	} else if (boolValueForKey(kIsEnabled) && arg2 < 0.0f &&  (-1.0f * arg2) > floatValueForKey(kVerticalScroll, 0.175)) {
+		NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
+		if (boolValueForKey(kIsInvertEnabled)) {
+			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+			SBDisplayItem *_item = [items objectAtIndex:0];
+			DGAlertClose *temp = [[%c(DGAlertClose) alloc] initWithMode:@"Alert"];
+			[temp show:self pageView:arg1 displayItem:_item velocity:1.0 deckController:nil itemContainer:nil reason:1];
+			[temp release];
+			temp = nil;
 			[items release];
-		} else if (quickActionIndicator == 4) { // launch application
-			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
-			SBDisplayItem *_item = [items objectAtIndex:0];
-			[self switcherScroller:arg1 itemTapped:_item];
-		} else if (quickActionIndicator == 5) { // close application
-			callOrig = YES;
-			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
-			SBDisplayItem *_item = [items objectAtIndex:0];
-			if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
-				[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
-			}
-			[items release];
-		} else if (quickActionIndicator == 6) { // relaunch application
-			callOrig = YES;
-			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
-			SBDisplayItem *_item = [items objectAtIndex:0];
-			if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
-				[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
-				if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
-					[self launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+		} else if (quickActionIndicator != 0) {
+			if (quickActionIndicator == 1) { // respring
+				[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
+			} else if (quickActionIndicator == 2) { // kill-all applications
+				[self closeAllApplications:YES];
+				if([self respondsToSelector:@selector(forceDismissAnimated:)]){
+					[self forceDismissAnimated:YES];
 				} else {
-					[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
 				}
-			}
-			[items release];
-		} else if (quickActionIndicator == 7) { // dismiss switcher
-			if([self respondsToSelector:@selector(forceDismissAnimated:)]) {
-				[self forceDismissAnimated:YES];
-			} else {
-				SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
-				[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+			} else if (quickActionIndicator == 3) { // relaunch-all applications
+				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+				[self closeAllApplications:NO];
+				[self launchApplications:items];
+				[items release];
+			} else if (quickActionIndicator == 4) { // launch application
+				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+				SBDisplayItem *_item = [items objectAtIndex:0];
+				[self switcherScroller:arg1 itemTapped:_item];
+				[items release];
+			} else if (quickActionIndicator == 5) { // close application
+				callOrig = YES;
+				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+				SBDisplayItem *_item = [items objectAtIndex:0];
+				if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+					[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+				}
+				[items release];
+			} else if (quickActionIndicator == 6) { // relaunch application
+				callOrig = YES;
+				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
+				SBDisplayItem *_item = [items objectAtIndex:0];
+				if (![_item.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+					[self switcherScroller:arg1 displayItemWantsToBeRemoved:_item];
+					if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+						[self launchAppWithIdentifier:_item.displayIdentifier url:nil actions:nil];
+					} else {
+						[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:_item.displayIdentifier suspended:NO];
+					}
+				}
+				[items release];
+			} else if (quickActionIndicator == 7) { // dismiss switcher
+				if([self respondsToSelector:@selector(forceDismissAnimated:)]) {
+					[self forceDismissAnimated:YES];
+				} else {
+					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+				}
 			}
 		}
 	} else {
@@ -378,10 +390,56 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 		%orig;
 		callOrig = NO;
 	} else {
-		DGAlertClose *temp = [[%c(DGAlertClose) alloc] initWithMode:@"Alert"];
-		[temp show:self pageView:arg1 displayItem:arg2 velocity:1.0 deckController:nil itemContainer:nil reason:1];
-		[temp release];
-		temp = nil;
+		if (boolValueForKey(kIsInvertEnabled)) {
+			NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
+			if (quickActionIndicator == 1) { // respring
+				[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
+			} else if (quickActionIndicator == 2) { // kill-all applications
+				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
+				[self closeAllApplications:YES];
+				if([self respondsToSelector:@selector(forceDismissAnimated:)]){
+					[self forceDismissAnimated:YES];
+				} else {
+					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+				}
+			} else if (quickActionIndicator == 3) { // relaunch-all applications
+				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
+				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
+				[self closeAllApplications:NO];
+				[self launchApplications:items];
+				[items release];
+			} else if (quickActionIndicator == 4) { // launch application
+				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
+				[self switcherScroller:arg1 itemTapped:arg2];
+			} else if (quickActionIndicator == 5) { // close application
+				if (![arg2.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+					%orig;
+				}
+			} else if (quickActionIndicator == 6) { // relaunch application
+				if (![arg2.displayIdentifier isEqualToString:@"com.apple.springboard"]) {
+					%orig;
+					if([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+						[self launchAppWithIdentifier:arg2.displayIdentifier url:nil actions:nil];
+					} else {
+						[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:arg2.displayIdentifier suspended:NO];
+					}
+				}
+			} else if (quickActionIndicator == 7) { // dismiss switcher
+				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
+				if([self respondsToSelector:@selector(forceDismissAnimated:)]) {
+					[self forceDismissAnimated:YES];
+				} else {
+					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
+					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
+				}
+			}
+		} else  {
+			DGAlertClose *temp = [[%c(DGAlertClose) alloc] initWithMode:@"Alert"];
+			[temp show:self pageView:arg1 displayItem:arg2 velocity:1.0 deckController:nil itemContainer:nil reason:1];
+			[temp release];
+			temp = nil;
+		}
 	}
 }
 
@@ -430,7 +488,23 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 -(void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
 	NSInteger quickActionIndicator = intValueForKey(kQuickAction, 0);
-	if (boolValueForKey(kIsEnabled) && quickActionIndicator != 0 && arg1 < 0.0f &&  (-1.0f * arg1) > floatValueForKey(kVerticalScroll, 0.175)) {
+
+	bool isTweakEnabled = boolValueForKey(kIsEnabled);
+	bool isCurrentAppWhiteListed = getPerApp(selected.displayIdentifier, kPerApp);
+	bool shouldPerformQuickAction = NO;
+	bool shouldPerformAlert = NO;
+	CGFloat req = floatValueForKey(kVerticalScroll, 0.175);
+	if (boolValueForKey(kIsInvertEnabled)) {
+		shouldPerformQuickAction = quickActionIndicator != 0 && arg1 > 0.0f && arg1 > req;
+		shouldPerformAlert = isTweakEnabled && !isCurrentAppWhiteListed && arg1 < 0.0f && arg1 < -req;
+	} else {
+		shouldPerformQuickAction = quickActionIndicator != 0 && arg1 < 0.0f &&  arg1 < -req;
+		shouldPerformAlert = isTweakEnabled && !isCurrentAppWhiteListed && arg1 > 0.0f && arg1 > req;
+	}
+	bool shouldCallOrigOnHomeScreen = !boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"];
+	bool shouldCallOrigOnApp = isTweakEnabled && isCurrentAppWhiteListed;
+
+	if (isTweakEnabled && shouldPerformQuickAction) {
 		if (quickActionIndicator == 1) { // respring
 			[[%c(FBSystemService) sharedInstance] exitAndRelaunch:YES];
 		} else if (quickActionIndicator == 2) { // kill-all applications
@@ -464,7 +538,7 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
 			[returnContainer _handlePageViewTap:returnPage];
 		}
-	} else if((boolValueForKey(kIsEnabled) && getPerApp(selected.displayIdentifier, kPerApp)) || !boolValueForKey(kIsEnabled) || (boolValueForKey(kIsEnabled) && !getPerApp(selected.displayIdentifier, kPerApp) && arg1 < floatValueForKey(kVerticalScroll, 0.175)) || isClosingAll || (!boolValueForKey(kHomescreen) && [selected.displayIdentifier isEqualToString:@"com.apple.springboard"])){
+	} else if(shouldCallOrigOnApp || !isTweakEnabled || !shouldPerformAlert || isClosingAll || shouldCallOrigOnHomeScreen) {
 		%orig;
 	} else if(!isShowingAlert) {
 		isShowingAlert = YES;

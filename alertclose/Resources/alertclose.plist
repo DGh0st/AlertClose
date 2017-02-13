@@ -222,6 +222,7 @@ Whitelist applications to not be killed by the kill-all.</string>
 			<key>footerText</key>
 			<string>Set the vertical scroll required to invoke the alert and quick action (recommend around 0.175).
 Action invoked on swipe down.
+Invert Action and Alert, swipe up gives quick action and swipe down gives alert.
 Disclaimer: Quick Action is untested on iOS 8.</string>
 		</dict>
 		<dict>
@@ -277,6 +278,20 @@ Disclaimer: Quick Action is untested on iOS 8.</string>
 			<integer>0</integer>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isInvertEnabled</string>
+			<key>label</key>
+			<string>Invert Action and Alert</string>
 			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>

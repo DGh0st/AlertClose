@@ -10,11 +10,11 @@
 	return _specifiers;
 }
 
--(void)save{
+- (void)save {
     [self.view endEditing:YES];
 }
 
--(void)email{
+- (void)email {
 	if([MFMailComposeViewController canSendMail]){
 		MFMailComposeViewController *email = [[MFMailComposeViewController alloc] initWithNibName:nil bundle:nil];
 		[email setSubject:@"AlertClose Support"];
@@ -31,23 +31,23 @@
 	}
 }
 
--(void)mailComposeController:(MFMailComposeViewController*)controller didFinishWithResult:(MFMailComposeResult)result error:(NSError*)error {
+- (void)mailComposeController:(MFMailComposeViewController*)controller didFinishWithResult:(MFMailComposeResult)result error:(NSError*)error {
     [self dismissViewControllerAnimated: YES completion: nil];
 }
 
--(void)donate{
+- (void)donate {
 	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=deeppwnage%40yahoo%2ecom&lc=US&item_name=DGh0st&item_number=DGh0st%20Tweak%20Inc%20%28Wow%20I%20own%20a%20company%29&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHostedGuest"]];
 }
 
--(void)follow{
+- (void)follow {
 	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://mobile.twitter.com/D_Gh0st"]];
 }
 @end
 
 @protocol PreferencesTableCustomView
--(id)initWithSpecifier:(id)arg1;
+- (id)initWithSpecifier:(id)arg1;
 @optional
--(CGFloat)preferredHeightForWidth:(CGFloat)arg1;
+- (CGFloat)preferredHeightForWidth:(CGFloat)arg1;
 @end
 
 @interface alertcloseCustomCell : PSTableCell <PreferencesTableCustomView> {
@@ -57,11 +57,9 @@
 @end
 
 @implementation alertcloseCustomCell
--(id)initWithSpecifier:(id)specifier {
-
+- (id)initWithSpecifier:(id)specifier {
 	self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell" specifier:specifier];
 	if (self) {
-
 		CGRect frame = CGRectMake(0, 2, [[UIScreen mainScreen] bounds].size.width, 60);
 		CGRect underFrame = CGRectMake(0, 35, [[UIScreen mainScreen] bounds].size.width, 60);
  
@@ -87,8 +85,7 @@
 	return self;
 }
  
--(CGFloat)preferredHeightForWidth:(CGFloat)arg1 {
-
+- (CGFloat)preferredHeightForWidth:(CGFloat)arg1 {
 	return 80.0f;
 }
 @end

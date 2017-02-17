@@ -18,7 +18,7 @@
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -41,7 +41,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -55,7 +55,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -69,7 +69,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -83,7 +83,7 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -99,7 +99,9 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>label</key>
 			<string>Specific</string>
 			<key>footerText</key>
-			<string>Blacklist applications to display alert for.</string>
+			<string>Blacklist applications to display alert for.
+Perform Single Action will perform the action instead of displaying alert if only one button is enabled. 
+Note: Only cancel being enabled still displays the alert.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -115,6 +117,20 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>ALSettingsKeyPrefix</key>
 			<string>PerApp-</string>
 			<key>ALChangeNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isPerformEnabled</string>
+			<key>label</key>
+			<string>Perform Single Action</string>
+			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>
 		<dict>
@@ -160,7 +176,7 @@ Whitelist applications to not be killed by the kill-all.</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
@@ -292,6 +308,28 @@ Disclaimer: Quick Action is untested on iOS 8.</string>
 			<string>isInvertEnabled</string>
 			<key>label</key>
 			<string>Invert Action and Alert</string>
+			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Extra</string>
+			<key>footerText</key>
+			<string>Auto Close Switcher will close out of switcher when last application is closed.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.dgh0st.alertclose</string>
+			<key>key</key>
+			<string>isAutoCloseSwitcherEnabled</string>
+			<key>label</key>
+			<string>Auto Close Switcher</string>
 			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>

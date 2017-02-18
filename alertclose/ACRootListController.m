@@ -60,8 +60,8 @@
 - (id)initWithSpecifier:(id)specifier {
 	self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell" specifier:specifier];
 	if (self) {
-		CGRect frame = CGRectMake(0, 2, [[UIScreen mainScreen] bounds].size.width, 60);
-		CGRect underFrame = CGRectMake(0, 35, [[UIScreen mainScreen] bounds].size.width, 60);
+		CGRect frame = CGRectMake(0, 2, self.contentView.bounds.size.width, 60);
+		CGRect underFrame = CGRectMake(0, 35, self.contentView.bounds.size.width, 60);
  
 		label = [[UILabel alloc] initWithFrame:frame];
 		[label setNumberOfLines:1];
@@ -70,6 +70,8 @@
 		[label setBackgroundColor:[UIColor clearColor]];
 		label.textColor = [UIColor blackColor];
 		label.textAlignment = NSTextAlignmentCenter;
+		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+		label.contentMode = UIViewContentModeScaleToFill;
 
 		underLabel = [[UILabel alloc] initWithFrame:underFrame];
 		[underLabel setNumberOfLines:1];
@@ -78,14 +80,25 @@
 		[underLabel setBackgroundColor:[UIColor clearColor]];
 		underLabel.textColor = [UIColor grayColor];
 		underLabel.textAlignment = NSTextAlignmentCenter;
+		underLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+		underLabel.contentMode = UIViewContentModeScaleToFill;
 
 		[self addSubview:label];
 		[self addSubview:underLabel];
 	}
 	return self;
 }
+
+- (void)setFrame:(CGRect)frame {
+	frame.origin.x = 0;
+	[super setFrame:frame];
+}
  
-- (CGFloat)preferredHeightForWidth:(CGFloat)arg1 {
+- (CGFloat)preferredHeightForWidth:(CGFloat)width {
 	return 80.0f;
+}
+
+- (CGFloat)preferredHeightForWidth:(CGFloat)width inTableView:(id)tableView {
+	return [self preferredHeightForWidth:width];
 }
 @end

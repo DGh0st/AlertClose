@@ -9,7 +9,7 @@
 - (void)forceDismissAnimated:(BOOL)arg1 ;
 - (void)switcherScroller:(id)arg1 itemTapped:(id)arg2;
 - (void)closeAllApplications:(BOOL)includeWhitelist;
-- (void)launchApplications:(NSMutableArray *)itemsToRun;
+- (void)launchApplications:(NSMutableArray *)itemsToRun withIdentifiers:(BOOL)identifiers;
 @end
 
 @interface SBDisplayItem : NSObject
@@ -38,7 +38,7 @@
 - (void)killDisplayItemOfContainer:(id)arg1 withVelocity:(CGFloat)arg2;
 - (id)_itemContainerForDisplayItem:(id)arg1;
 - (void)closeAllApplications:(BOOL)includeWhitelist;
-- (void)launchApplications:(NSMutableArray *)itemsToRun;
+- (void)launchApplications:(NSMutableArray *)itemsToRun withIdentifiers:(BOOL)identifiers;
 @end
 
 @interface SBDeckSwitcherPageView
@@ -92,6 +92,7 @@ static NSString *const identifier = @"com.dgh0st.alertclose";
 static NSString *const kCustomText = @"customText";
 static NSString *const kPerApp = @"PerApp-";
 static NSString *const kPerAppKill = @"PerAppKill-";
+static NSString *const kQuickLaunch = @"QuickLaunch-";
 
 static BOOL isTweakEnabled = YES;
 static BOOL isCloseButtonEnabled = YES;
@@ -111,9 +112,9 @@ static BOOL callOrig = NO;
 static BOOL isShowingAlert = NO;
 static BOOL isClosingAll = NO;
 
-static BOOL boolValueForKey(NSString *key) { // get bool value of preference
+static BOOL boolValueForKey(NSString *key, BOOL defaultValue) { // get bool value of preference
 	NSNumber *result = (__bridge NSNumber *)CFPreferencesCopyAppValue((CFStringRef)key, (CFStringRef)identifier);
-	BOOL temp = result ? [result boolValue] : NO;
+	BOOL temp = result ? [result boolValue] : defaultValue;
 	[result release];
 	return temp;
 }
@@ -141,14 +142,14 @@ static NSInteger intValueForKey(NSString *key, NSInteger defaultValue) { // get 
 	return temp;
 }
 
-static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of preference of specific application (AppList)
-    BOOL result = NO;
+static BOOL getPerApp(NSString *appId, NSString *prefix, BOOL defaultValue) { // get bool value of preference of specific application (AppList)
+    BOOL result = defaultValue;
     NSArray *allKeys = (NSArray *)CFPreferencesCopyKeyList(CFSTR("com.dgh0st.alertclose"), kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
     for (NSString *key in allKeys) {
 		if ([key hasPrefix:prefix] && CFPreferencesGetAppIntegerValue((CFStringRef)key, CFSTR("com.dgh0st.alertclose"), NULL)) {
 		    NSString *tempId = [key substringFromIndex:[prefix length]];
 		    if ([tempId isEqual:appId]) {
-				result = YES;
+				result = boolValueForKey(key, defaultValue);
 				break;
 		    }
 		}
@@ -157,22 +158,35 @@ static BOOL getPerApp(NSString *appId, NSString *prefix) { // get bool value of 
     return result;
 }
 
+static NSMutableArray *prefixApps(NSString *prefix) { // get app identifiers that match the prefix from preference of quick launch (AppList)
+	NSMutableArray *result = [[NSMutableArray alloc] init];
+	NSArray *allKeys = (NSArray *)CFPreferencesCopyKeyList(CFSTR("com.dgh0st.alertclose"), kCFPreferencesCurrentUser, kCFPreferencesCurrentHost);
+    for (NSString *key in allKeys) {
+		if ([key hasPrefix:prefix] && CFPreferencesGetAppIntegerValue((CFStringRef)key, CFSTR("com.dgh0st.alertclose"), NULL)) {
+		    NSString *tempId = [key substringFromIndex:[prefix length]];
+		    [result addObject:tempId];
+		}
+   	}
+    [allKeys release];
+	return result;
+}
+
 static void PreferencesChanged() {
 	CFPreferencesAppSynchronize(CFSTR("com.dgh0st.alertclose"));
 
-	isTweakEnabled = boolValueForKey(@"isEnabled");
-	isCloseButtonEnabled = boolValueForKey(@"isCloseEnabled");
-	isRelaunchButtonEnabled = boolValueForKey(@"isRelaunchEnabled");
-	isDismissButtonEnabled = boolValueForKey(@"isDismissEnabled");
-	isCancelButtonEnabled = boolValueForKey(@"isCancelEnabled");
-	isPerformSingleButtonActionEnabled = boolValueForKey(@"isPerformEnabled");
-	isHomescreenSwipeEnabled = boolValueForKey(@"isHomescreenEnabled");
-	isKillAllWhitelistEnabled = boolValueForKey(@"isWhitelistEnabled");
+	isTweakEnabled = boolValueForKey(@"isEnabled", YES);
+	isCloseButtonEnabled = boolValueForKey(@"isCloseEnabled", YES);
+	isRelaunchButtonEnabled = boolValueForKey(@"isRelaunchEnabled", YES);
+	isDismissButtonEnabled = boolValueForKey(@"isDismissEnabled", YES);
+	isCancelButtonEnabled = boolValueForKey(@"isCancelEnabled", YES);
+	isPerformSingleButtonActionEnabled = boolValueForKey(@"isPerformEnabled", NO);
+	isHomescreenSwipeEnabled = boolValueForKey(@"isHomescreenEnabled", YES);
+	isKillAllWhitelistEnabled = boolValueForKey(@"isKillWhitelistEnabled", NO);
 	verticalScrollReq = floatValueForKey(@"VerticalScroll", 0.175);
-	isKillAllContinueNowPlayingEnabled = boolValueForKey(@"isNowPlayingEnabled");
+	isKillAllContinueNowPlayingEnabled = boolValueForKey(@"isNowPlayingEnabled", NO);
 	quickActionIndicator = intValueForKey(@"QuickAction", 0);
-	isInvertAlertAndActionEnabled = boolValueForKey(@"isInvertEnabled");
-	isAutoCloseSwitcherOnLastAppEnabled = boolValueForKey(@"isAutoCloseSwitcherEnabled");
+	isInvertAlertAndActionEnabled = boolValueForKey(@"isInvertEnabled", NO);
+	isAutoCloseSwitcherOnLastAppEnabled = boolValueForKey(@"isAutoCloseSwitcherEnabled", NO);
 }
 
 @implementation DGAlertClose
@@ -207,6 +221,7 @@ static void PreferencesChanged() {
 			[_actionSheet addButtonWithTitle:@"Respring"];
 			[_actionSheet addButtonWithTitle:@"Kill-All Applications"];
 			[_actionSheet addButtonWithTitle:@"Relaunch-All Applications"];
+			[_actionSheet addButtonWithTitle:@"Quick Launch Applications"];
 			cancelButtonIndex = [_actionSheet addButtonWithTitle:@"Cancel"];
 		} else { // everything else
 			NSString *appName = @"";
@@ -344,13 +359,24 @@ static void PreferencesChanged() {
 		if (_controller != nil) {
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[_controller displayItems]];
 			[_controller closeAllApplications:NO];
-			[_controller launchApplications:items];
+			[_controller launchApplications:items withIdentifiers:NO];
 			[items release];
 		}
 		if (_deckController != nil) {
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[_deckController displayItems]];
 			[_deckController closeAllApplications:NO];
-			[_deckController launchApplications:items];
+			[_deckController launchApplications:items withIdentifiers:NO];
+			[items release];
+		}
+	} else if ([_mode isEqualToString:@"Quick Launch Applications"]) { // Quick Launch applications
+		if (_controller != nil) {
+			NSMutableArray *items = prefixApps(kQuickLaunch);
+			[_controller launchApplications:items withIdentifiers:YES];
+			[items release];
+		}
+		if (_deckController != nil) {
+			NSMutableArray *items = prefixApps(kQuickLaunch);
+			[_deckController launchApplications:items withIdentifiers:YES];
 			[items release];
 		}
 	}
@@ -393,7 +419,7 @@ static void PreferencesChanged() {
 			} else if (quickActionIndicator == 3) { // relaunch-all applications
 				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 				[self closeAllApplications:NO];
-				[self launchApplications:items];
+				[self launchApplications:items withIdentifiers:NO];
 				[items release];
 			} else if (quickActionIndicator == 4) { // launch application
 				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[[[arg1 displayLayouts] objectAtIndex:0] displayItems]];
@@ -436,6 +462,10 @@ static void PreferencesChanged() {
 					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
 				}
+			} else if (quickActionIndicator == 8) { // quick launch
+				NSMutableArray *items = prefixApps(kQuickLaunch);
+				[self launchApplications:items withIdentifiers:YES];
+				[items release];
 			}
 		}
 	} else {
@@ -444,7 +474,7 @@ static void PreferencesChanged() {
 }
 
 - (void)switcherScroller:(SBAppSwitcherPageViewController *)arg1 displayItemWantsToBeRemoved:(SBDisplayItem *)arg2 {
-	bool isCurrentAppWhiteListed = getPerApp(arg2.displayIdentifier, kPerApp);
+	bool isCurrentAppWhiteListed = getPerApp(arg2.displayIdentifier, kPerApp, NO);
 
 	if ((isTweakEnabled && isCurrentAppWhiteListed) || !isTweakEnabled || callOrig || isClosingAll || (!isHomescreenSwipeEnabled && [arg2.displayIdentifier isEqualToString:@"com.apple.springboard"])) {
 		%orig;
@@ -466,7 +496,7 @@ static void PreferencesChanged() {
 				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
 				NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 				[self closeAllApplications:NO];
-				[self launchApplications:items];
+				[self launchApplications:items withIdentifiers:NO];
 				[items release];
 			} else if (quickActionIndicator == 4) { // launch application
 				[arg1 cancelPossibleRemovalOfDisplayItem:arg2];
@@ -501,6 +531,10 @@ static void PreferencesChanged() {
 					SBDisplayItem *returnDisplayItem = MSHookIvar<SBDisplayItem *>(self, "_returnToDisplayItem");
 					[self switcherScroller:arg1 itemTapped:returnDisplayItem];
 				}
+			} else if (quickActionIndicator == 8) { // quick launch
+				NSMutableArray *items = prefixApps(kQuickLaunch);
+				[self launchApplications:items withIdentifiers:YES];
+				[items release];
 			}
 		} else  {
 			DGAlertClose *temp = [[%c(DGAlertClose) alloc] initWithMode:@"Alert"];
@@ -524,7 +558,7 @@ static void PreferencesChanged() {
 	SBAppSwitcherPageViewController *pageController = MSHookIvar<SBAppSwitcherPageViewController *>(self, "_pageController");
 	for(SBDisplayItem *item in items) { // close applications
 		if (includeWhitelist) {
-			if (!isKillAllWhitelistEnabled || !getPerApp(item.displayIdentifier, kPerAppKill)) {
+			if (!isKillAllWhitelistEnabled || !getPerApp(item.displayIdentifier, kPerAppKill, NO)) {
 				if (isKillAllContinueNowPlayingEnabled && [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
 					continue;
 				}
@@ -539,12 +573,22 @@ static void PreferencesChanged() {
 }
 
 %new
-- (void)launchApplications:(NSMutableArray *)itemsToRun {
-	for (SBDisplayItem *item in itemsToRun) { // launch
-		if ([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
-			[self launchAppWithIdentifier:item.displayIdentifier url:nil actions:nil];
-		} else {
-			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+- (void)launchApplications:(NSMutableArray *)itemsToRun withIdentifiers:(BOOL)identifiers {
+	if (identifiers) {
+		for (NSString *iden in itemsToRun) { // launch
+			if ([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+				[self launchAppWithIdentifier:iden url:nil actions:nil];
+			} else {
+				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:iden suspended:NO];
+			}
+		}
+	} else {
+		for (SBDisplayItem *item in itemsToRun) { // launch
+			if ([self respondsToSelector:@selector(launchAppWithIdentifier:url:actions:)]) {
+				[self launchAppWithIdentifier:item.displayIdentifier url:nil actions:nil];
+			} else {
+				[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+			}
 		}
 	}
 }
@@ -556,7 +600,7 @@ static void PreferencesChanged() {
 - (void)scrollViewKillingProgressUpdated:(CGFloat)arg1 ofContainer:(SBDeckSwitcherItemContainer *)arg2 {
 	SBDisplayItem *selected = [arg2 displayItem];
 
-	bool isCurrentAppWhiteListed = getPerApp(selected.displayIdentifier, kPerApp);
+	bool isCurrentAppWhiteListed = getPerApp(selected.displayIdentifier, kPerApp, NO);
 	bool shouldPerformQuickAction = NO;
 	bool shouldPerformAlert = NO;
 	if (isInvertAlertAndActionEnabled) {
@@ -581,7 +625,7 @@ static void PreferencesChanged() {
 		} else if (quickActionIndicator == 3) { // relaunch-all applications
 			NSMutableArray *items = [[NSMutableArray alloc] initWithArray:[self displayItems]];
 			[self closeAllApplications:NO];
-			[self launchApplications:items];
+			[self launchApplications:items withIdentifiers:NO];
 			[items release];
 		} else if (quickActionIndicator == 4) { // launch application
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(arg2, "_pageView");
@@ -609,6 +653,10 @@ static void PreferencesChanged() {
 			SBDeckSwitcherItemContainer *returnContainer = [self _itemContainerForDisplayItem:returnDisplayItem];
 			SBDeckSwitcherPageView *returnPage = MSHookIvar<SBDeckSwitcherPageView *>(returnContainer, "_pageView");
 			[returnContainer _handlePageViewTap:returnPage];
+		} else if (quickActionIndicator == 8) { // quick launch
+			NSMutableArray *items = prefixApps(kQuickLaunch);
+			[self launchApplications:items withIdentifiers:YES];
+			[items release];
 		}
 	} else if (shouldCallOrigOnApp || !isTweakEnabled || !shouldPerformAlert || isClosingAll || shouldCallOrigOnHomeScreen) {
 		%orig;
@@ -624,7 +672,7 @@ static void PreferencesChanged() {
 }
 
 - (_Bool)isDisplayItemOfContainerRemovable:(id)arg1{
-	if (isTweakEnabled && !getPerApp([arg1 displayItem].displayIdentifier, kPerApp)) {
+	if (isTweakEnabled && !getPerApp([arg1 displayItem].displayIdentifier, kPerApp, NO)) {
 		return NO;
 	}
 	return %orig(arg1);
@@ -638,7 +686,7 @@ static void PreferencesChanged() {
 	[items removeObjectAtIndex:0];
 	for(SBDisplayItem *item in items) { // close applications
 		if (includeWhitelist) {
-			if (!isKillAllWhitelistEnabled || !getPerApp(item.displayIdentifier, kPerAppKill)) {
+			if (!isKillAllWhitelistEnabled || !getPerApp(item.displayIdentifier, kPerAppKill, NO)) {
 				if (isKillAllContinueNowPlayingEnabled &&  [item.displayIdentifier isEqualToString:nowPlayingBundleIdentifier]) {
 					continue;
 				}
@@ -653,9 +701,15 @@ static void PreferencesChanged() {
 }
 
 %new
-- (void)launchApplications:(NSMutableArray *)itemsToRun {
-	for (SBDisplayItem *item in itemsToRun) { // launch applications
-		[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+- (void)launchApplications:(NSMutableArray *)itemsToRun withIdentifiers:(BOOL)identifiers {
+	if (identifiers) {
+		for (NSString *iden in itemsToRun) { // launch applications
+			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:iden suspended:NO];
+		}
+	} else {
+		for (SBDisplayItem *item in itemsToRun) { // launch applications
+			[(SpringBoard *)[UIApplication sharedApplication] launchApplicationWithIdentifier:item.displayIdentifier suspended:NO];
+		}
 	}
 }
 %end

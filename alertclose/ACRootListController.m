@@ -42,63 +42,44 @@
 - (void)follow {
 	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://mobile.twitter.com/D_Gh0st"]];
 }
-@end
 
-@protocol PreferencesTableCustomView
-- (id)initWithSpecifier:(id)arg1;
-@optional
-- (CGFloat)preferredHeightForWidth:(CGFloat)arg1;
-@end
+- (void)viewDidLoad {
+	[super viewDidLoad];
+	UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.table.bounds.size.width, 80)];
+	[headerView setBackgroundColor:[UIColor blackColor]];
+	[headerView setContentMode:UIViewContentModeCenter];
+	[headerView setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
 
-@interface alertcloseCustomCell : PSTableCell <PreferencesTableCustomView> {
-	UILabel *label;
-	UILabel *underLabel;
-}
-@end
-
-@implementation alertcloseCustomCell
-- (id)initWithSpecifier:(id)specifier {
-	self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell" specifier:specifier];
-	if (self) {
-		CGRect frame = CGRectMake(0, 2, self.contentView.bounds.size.width, 60);
-		CGRect underFrame = CGRectMake(0, 35, self.contentView.bounds.size.width, 60);
+	CGRect frame = CGRectMake(0, 16, self.table.bounds.size.width, 32);
+	CGRect underFrame = CGRectMake(0, 48, self.table.bounds.size.width, 16);
  
-		label = [[UILabel alloc] initWithFrame:frame];
-		[label setNumberOfLines:1];
-		label.font = [UIFont fontWithName:@"HelveticaNeue-UltraLight" size:42];
-		[label setText:@"AlertClose"];
-		[label setBackgroundColor:[UIColor clearColor]];
-		label.textColor = [UIColor blackColor];
-		label.textAlignment = NSTextAlignmentCenter;
-		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		label.contentMode = UIViewContentModeScaleToFill;
+	UILabel *label = [[UILabel alloc] initWithFrame:frame];
+	[label setNumberOfLines:1];
+	label.font = [UIFont fontWithName:@"HelveticaNeue-UltraLight" size:42];
+	[label setText:@"AlertClose"];
+	[label setBackgroundColor:[UIColor clearColor]];
+	label.textColor = [UIColor whiteColor];
+	label.textAlignment = NSTextAlignmentCenter;
+	label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+	label.contentMode = UIViewContentModeScaleToFill;
 
-		underLabel = [[UILabel alloc] initWithFrame:underFrame];
-		[underLabel setNumberOfLines:1];
-		underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
-		[underLabel setText:@"By DGh0st"];
-		[underLabel setBackgroundColor:[UIColor clearColor]];
-		underLabel.textColor = [UIColor grayColor];
-		underLabel.textAlignment = NSTextAlignmentCenter;
-		underLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		underLabel.contentMode = UIViewContentModeScaleToFill;
+	UILabel *underLabel = [[UILabel alloc] initWithFrame:underFrame];
+	[underLabel setNumberOfLines:1];
+	underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
+	[underLabel setText:@"By DGh0st"];
+	[underLabel setBackgroundColor:[UIColor clearColor]];
+	underLabel.textColor = [UIColor whiteColor];
+	underLabel.textAlignment = NSTextAlignmentCenter;
+	underLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+	underLabel.contentMode = UIViewContentModeScaleToFill;
 
-		[self addSubview:label];
-		[self addSubview:underLabel];
-	}
-	return self;
-}
+	[headerView addSubview:label];
+	[headerView addSubview:underLabel];
 
-- (void)setFrame:(CGRect)frame {
-	frame.origin.x = 0;
-	[super setFrame:frame];
-}
- 
-- (CGFloat)preferredHeightForWidth:(CGFloat)width {
-	return 80.0f;
-}
+	self.table.tableHeaderView = headerView;
 
-- (CGFloat)preferredHeightForWidth:(CGFloat)width inTableView:(id)tableView {
-	return [self preferredHeightForWidth:width];
+	[label release];
+	[underLabel release];
+	[headerView release];
 }
 @end

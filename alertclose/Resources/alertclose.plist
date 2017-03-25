@@ -7,12 +7,6 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>footerCellClass</key>
-			<string>alertcloseCustomCell</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -99,8 +93,9 @@ Note: Cancel will be auto enabled if all buttons are disabled, leading to no way
 			<key>label</key>
 			<string>Specific</string>
 			<key>footerText</key>
-			<string>Blacklist applications to display alert for.
+			<string>Whitelist applications to disable alert for.
 Perform Single Action will perform the action instead of displaying alert if only one button is enabled. 
+Select applicatons to launch via Quick Launch action.
 Note: Only cancel being enabled still displays the alert.</string>
 		</dict>
 		<dict>
@@ -111,7 +106,7 @@ Note: Only cancel being enabled still displays the alert.</string>
 			<key>isController</key>
 			<true/>
 			<key>label</key>
-			<string>Blacklist</string>
+			<string>Whitelist</string>
 			<key>ALSettingsPath</key>
 			<string>/var/mobile/Library/Preferences/com.dgh0st.alertclose.plist</string>
 			<key>ALSettingsKeyPrefix</key>
@@ -131,6 +126,22 @@ Note: Only cancel being enabled still displays the alert.</string>
 			<key>label</key>
 			<string>Perform Single Action</string>
 			<key>PostNotification</key>
+			<string>com.dgh0st.alertclose/settingschanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>bundle</key>
+			<string>AppList</string>
+			<key>isController</key>
+			<true/>
+			<key>label</key>
+			<string>Quick Launch Applications</string>
+			<key>ALSettingsPath</key>
+			<string>/var/mobile/Library/Preferences/com.dgh0st.alertclose.plist</string>
+			<key>ALSettingsKeyPrefix</key>
+			<string>QuickLaunch-</string>
+			<key>ALChangeNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>
 		<dict>
@@ -208,9 +219,9 @@ Whitelist applications to not be killed by the kill-all.</string>
 			<key>defaults</key>
 			<string>com.dgh0st.alertclose</string>
 			<key>key</key>
-			<string>isWhitelistEnabled</string>
+			<string>isKillWhitelistEnabled</string>
 			<key>label</key>
-			<string>Enable Whitelist</string>
+			<string>Enable Kill-All Whitelist</string>
 			<key>PostNotification</key>
 			<string>com.dgh0st.alertclose/settingschanged</string>
 		</dict>
@@ -222,7 +233,7 @@ Whitelist applications to not be killed by the kill-all.</string>
 			<key>isController</key>
 			<true/>
 			<key>label</key>
-			<string>Whitelist</string>
+			<string>Kill-All Whitelist</string>
 			<key>ALSettingsPath</key>
 			<string>/var/mobile/Library/Preferences/com.dgh0st.alertclose.plist</string>
 			<key>ALSettingsKeyPrefix</key>
@@ -278,6 +289,7 @@ Disclaimer: Quick Action is untested on iOS 8.</string>
 					<string>Close Application</string>
 					<string>Relaunch Application</string>
 					<string>Dismiss Switcher</string>
+					<string>Quick Launch</string>
 				</array>
 			<key>validValues</key>
 				<array>
@@ -289,6 +301,7 @@ Disclaimer: Quick Action is untested on iOS 8.</string>
 					<integer>5</integer><!--Close-->
 					<integer>6</integer><!--Rleaunch-->
 					<integer>7</integer><!--Dismiss Switcher-->
+					<integer>8</integer><!--Quick Launch-->
 				</array>
 			<key>default</key>
 			<integer>0</integer>
